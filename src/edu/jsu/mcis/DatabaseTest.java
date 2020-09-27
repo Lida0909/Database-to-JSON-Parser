@@ -8,36 +8,35 @@ public class DatabaseTest {
 
     public static void main(String[] args) {
         
+        JSONArray array = (JSONArray) getJSONData();
+        System.out.println("\nConversion results from Database into an array of JSON objects");
+        System.out.println("*************************************************************");
+        System.out.println(array);
+        System.out.println();
     }
-    
-    
-    
-    
-    
     
     public static JSONArray getJSONData(){
         
         Connection conn = null;
-        PreparedStatement pstSelect = null, pstUpdate = null;
+        PreparedStatement pstSelect = null;
         ResultSet resultset = null;
         ResultSetMetaData metadata = null;
         
         JSONArray list = new JSONArray();
-        String query, key, value;
+        String query, value;
         
-        String newFirstName = "Alfred", newLastName = "Neuman";
+        ArrayList<String> records = new ArrayList<>();
         
         boolean hasresults;
-        int resultCount, columnCount, updateCount = 0;
+        int resultCount, columnCount;
         
         try {
             
             /* Identify the Server */
             
-            String server = ("jdbc:mysql://localhost/db_test");
+            String server = ("jdbc:mysql://localhost/p2_test");
             String username = "root";
             String password = "CS448";
-            System.out.println("Connecting to " + server + "...");
             
             /* Load the MySQL JDBC Driver */
             
@@ -55,41 +54,12 @@ public class DatabaseTest {
                 
                 System.out.println("Connected Successfully!");
                 
-                // Prepare Update Query
-                
-                query = "INSERT INTO people (firstname, lastname) VALUES (?, ?)";
-                pstUpdate = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-                pstUpdate.setString(1, newFirstName);
-                pstUpdate.setString(2, newLastName);
-                
-                // Execute Update Query
-                
-                updateCount = pstUpdate.executeUpdate();
-                
-                // Get New Key; Print To Console
-                
-                if (updateCount > 0) {
-            
-                    resultset = pstUpdate.getGeneratedKeys();
-
-                    if (resultset.next()) {
-
-                        System.out.print("Update Successful!  New Key: ");
-                        System.out.println(resultset.getInt(1));
-
-                    }
-
-                }
-                
-                
                 /* Prepare Select Query */
                 
                 query = "SELECT * FROM people";
                 pstSelect = conn.prepareStatement(query);
                 
                 /* Execute Select Query */
-                
-                System.out.println("Submitting Query ...");
                 
                 hasresults = pstSelect.execute();                
                 
@@ -107,40 +77,38 @@ public class DatabaseTest {
                         metadata = resultset.getMetaData();
                         columnCount = metadata.getColumnCount();
                         
-                        /* Get Column Names; Print as Table Header */
+                        /* Get Column Names; Append them in an ArrayList "key" */
                         
-                        for (int i = 1; i <= columnCount; i++) {
-
-                            key = metadata.getColumnLabel(i);
-
-                            System.out.format("%20s", key);
-
+                        for (int i = 2; i <= columnCount; i++) {
+                            records.add(metadata.getColumnLabel(i));
                         }
                         
-                        /* Get Data; Print as Table Rows */
+                        /* Get Data; put the data in JSONObject */
                         
                         while(resultset.next()) {
                             
-                            /* Begin Next ResultSet Row */
-
-                            System.out.println();
+                            /* Begin Next ResultSet Row; Loop Through ResultSet
+                            Colums; Append to jsonObject*/
                             
-                            /* Loop Through ResultSet Columns; Print Values */
+                            JSONObject object = new JSONObject();
 
-                            for (int i = 1; i <= columnCount; i++) {
-
+                            for (int i = 2; i <= columnCount; i++) {
+                                
+                                JSONObject jsonObject = new JSONObject();
                                 value = resultset.getString(i);
 
                                 if (resultset.wasNull()) {
-                                    System.out.format("%20s", "NULL");
+                                    jsonObject.put(records.get(i-2), "NULL");
+                                    jsonObject.toJSONString();
                                 }
 
                                 else {
-                                    System.out.format("%20s", value);
+                                    jsonObject.put(records.get(i-2), value);
+                                    jsonObject.toJSONString();
                                 }
-
+                                object.putAll(jsonObject);
                             }
-
+                            list.add(object);
                         }
                         
                     }
@@ -163,8 +131,6 @@ public class DatabaseTest {
                 
             }
             
-            System.out.println();
-            
             /* Close Database Connection */
             
             conn.close();
@@ -182,10 +148,9 @@ public class DatabaseTest {
             if (resultset != null) { try { resultset.close(); resultset = null; } catch (Exception e) {} }
             
             if (pstSelect != null) { try { pstSelect.close(); pstSelect = null; } catch (Exception e) {} }
-            
-            if (pstUpdate != null) { try { pstUpdate.close(); pstUpdate = null; } catch (Exception e) {} }
-            
+                        
         }
+        return list;
         
     }
     
